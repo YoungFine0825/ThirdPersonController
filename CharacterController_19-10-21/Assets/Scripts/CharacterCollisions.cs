@@ -36,7 +36,8 @@ public class CharacterCollisions
 
     public static bool ClosestPointOnSurface(Collider col, Vector3 to,out Vector3 concatPoint)
     {
-        bool isConcated = false;
+        bool isConcated = true;
+
         if (col is BoxCollider)
         {
             concatPoint = CharacterCollisions.ClosestPointOnSurface((BoxCollider)col, to);
@@ -48,9 +49,8 @@ public class CharacterCollisions
         else
         {
             concatPoint = Vector3.zero;
+            isConcated = false;
         }
-
-        isConcated = concatPoint != Vector3.zero;
 
         return isConcated;
     }

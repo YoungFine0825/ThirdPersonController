@@ -2,45 +2,161 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+
+[SerializeField]
+public class CollisionSphere
+{
+    public bool isHead = false;
+    public bool isFeet = false;
+    public float offset = 0;
+    public float radius = 0.5f;
+    public CollisionSphere()
+    {
+
+    }
+
+    public CollisionSphere(bool isHead, bool isFeet, float Offset,float radius = 0.5f)
+    {
+        this.isHead = isHead;
+        this.isFeet = isFeet;
+        this.offset = Offset;
+        this.radius = radius;
+    }
+}
+
 public class CharacterController : MonoBehaviour
 {
 
-    public float radius = 1f;
+    public Transform target;
 
-    private bool _onConcated = false;
+    [SerializeField]
+    private CollisionSphere[] spheres = new CollisionSphere[3]{
+        new CollisionSphere(false,true,-0.5f),
+        new CollisionSphere(false,false,0),
+        new CollisionSphere(true,false,0.5f)
+    };
 
-    private Vector3 _concatPoint = Vector3.zero;
+    private bool _onContacted = false;
 
+    private Vector3 _contactPoint = Vector3.zero;
+
+    private const float TinyTolerance = 0.01f;
+    private const string TemporaryLayer = "TempCast";
+    private int TemporaryLayerIndex;
+
+    private void Awake()
+    {
+        TemporaryLayerIndex = LayerMask.NameToLayer(TemporaryLayer);
+    }
 
     void LateUpdate()
     {
-        _onConcated = false;
+        PushBack();
+    }
 
-        _concatPoint = Vector3.zero;
-
-        bool isConcatedSucceeded = false;
-
-        foreach (Collider col in Physics.OverlapSphere(transform.position, radius))
+    private void PushBack()
+    {
+        if (spheres != null)
         {
-            isConcatedSucceeded = CharacterCollisions.ClosestPointOnSurface(col, transform.position,out _concatPoint);
+            _onContacted = false;
 
-            if (isConcatedSucceeded)
+            _contactPoint = Vector3.zero;
+
+            for (int i = 0; i < spheres.Length; i++)
             {
-                Vector3 v = transform.position - _concatPoint;
+                CollisionSphere s = spheres[i];
+                
+                Vector3 spherePosition = SpherePosition(s);
 
-                transform.position += Vector3.ClampMagnitude(v,Mathf.Clamp(radius - v.magnitude,0,radius));
+                float sphereRadius = s.radius;
+                
+                bool isConcatedSucceeded = false;
 
-                _onConcated = true;
+                if (s != null)
+                {
+                    foreach (Collider col in Physics.OverlapSphere( spherePosition, sphereRadius ) )
+                    {
+                        isConcatedSucceeded = CharacterCollisions.ClosestPointOnSurface(col, spherePosition,out _contactPoint);
+
+                        if (isConcatedSucceeded)
+                        {
+                            DebugDrawer.DrawMarker(_contactPoint, 5, Color.blue, 0);
+
+                            Vector3 v = _contactPoint - spherePosition;
+
+                            // 先保存被碰撞对象的层Id
+                            int layer = col.gameObject.layer;
+
+                            //通过设置临时Layer，将除当前被碰撞体以外的物体忽略掉。
+                            col.gameObject.layer = TemporaryLayerIndex;
+
+                            // 从CollisionSphere的中点向接触点的方向发射一条射线，检测CollisionSphere的中点是否在被碰撞体的内部。
+                            bool facingNormal = Physics.SphereCast(new Ray(spherePosition, v.normalized), TinyTolerance, v.magnitude + TinyTolerance, 1 << TemporaryLayerIndex);
+
+                            col.gameObject.layer = layer;
+
+                            if (facingNormal)
+                            {
+                                //CollisionSphere在被碰撞体的外部
+                                if (Vector3.Distance(spherePosition, _contactPoint) < sphereRadius)
+                                {
+                                    //CollisionSphere的半径减去向量的模得到反推的距离，然后反转得到反推的向量
+                                    v = v.normalized * (sphereRadius - v.magnitude) * -1;
+                                }
+                                else
+                                {
+                                    continue;
+                                }
+                            }
+                            else
+                            {
+                                //CollisionSphere在被碰撞体的内部
+                                v = v.normalized * (sphereRadius + v.magnitude);
+                            }
+
+                            target.position += v;
+
+                            
+                        }
+                    }
+                }
             }
-
         }
     }
 
     private void OnDrawGizmos()
     {
-        Gizmos.color = _onConcated ? Color.red : Color.green;
-        Gizmos.DrawWireSphere(transform.position,radius);
-        Gizmos.color = Color.blue;
-        Gizmos.DrawWireSphere(_concatPoint,0.2f);
+
+        if (spheres != null)
+        {
+            for (int i = 0; i < spheres.Length; ++i)
+            {
+                Gizmos.color = spheres[i].isFeet ? Color.green : (spheres[i].isHead ? Color.yellow : Color.cyan);
+                Gizmos.DrawWireSphere(SpherePosition(spheres[i]), spheres[i].radius);
+                if (_onContacted)
+                {
+                    Gizmos.DrawLine(SpherePosition(spheres[i]), SpherePosition(spheres[i]) - _contactPoint);
+                }
+                
+            }
+        }
+
+    }
+
+    private Vector3 SpherePosition(CollisionSphere sphere)
+    {
+        Vector3 ret = Vector3.zero;
+        if (target != null)
+        {
+            ret = target.position;
+        }
+        else
+        {
+            ret = transform.position;
+        }
+
+        ret.y += sphere.offset;
+
+        return ret;
     }
 }
