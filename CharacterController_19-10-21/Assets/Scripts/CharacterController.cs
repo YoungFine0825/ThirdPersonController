@@ -2,161 +2,218 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-
-[SerializeField]
-public class CollisionSphere
-{
-    public bool isHead = false;
-    public bool isFeet = false;
-    public float offset = 0;
-    public float radius = 0.5f;
-    public CollisionSphere()
-    {
-
-    }
-
-    public CollisionSphere(bool isHead, bool isFeet, float Offset,float radius = 0.5f)
-    {
-        this.isHead = isHead;
-        this.isFeet = isFeet;
-        this.offset = Offset;
-        this.radius = radius;
-    }
-}
-
-public class CharacterController : MonoBehaviour
+namespace ThirdPersonCharaterController
 {
 
-    public Transform target;
+
 
     [SerializeField]
-    private CollisionSphere[] spheres = new CollisionSphere[3]{
+    public class CollisionSphere
+    {
+        public bool isHead = false;
+        public bool isFeet = false;
+        public float offset = 0;
+        public float radius = 0.5f;
+        public CollisionSphere()
+        {
+
+        }
+
+        public CollisionSphere(bool isHead, bool isFeet, float Offset, float radius = 0.5f)
+        {
+            this.isHead = isHead;
+            this.isFeet = isFeet;
+            this.offset = Offset;
+            this.radius = radius;
+        }
+    }
+
+    public class CharacterController : MonoBehaviour
+    {
+        [SerializeField]
+        public Transform target;
+
+        [SerializeField]
+        public float radius = 0.5f;
+
+        public Vector3 up {
+            get
+            {
+                if (target != null)
+                {
+                    return target.up;
+                }
+                else
+                {
+                    return transform.up;
+                }
+            }
+        }
+
+        public Vector3 down
+        {
+            get
+            {
+                if (target != null)
+                {
+                    return -target.up;
+                }
+                else
+                {
+                    return -transform.up;
+                }
+            }
+        }
+
+        public Vector3 worldPosition {
+            get
+            {
+                if (target != null)
+                {
+                    return target.transform.position;
+                }
+                else
+                {
+                    return transform.position;
+                }
+            }
+        }
+
+        [SerializeField]
+        private CollisionSphere[] spheres = new CollisionSphere[3]{
         new CollisionSphere(false,true,-0.5f),
         new CollisionSphere(false,false,0),
         new CollisionSphere(true,false,0.5f)
-    };
+        };
 
-    private bool _onContacted = false;
+        private bool _onContacted = false;
 
-    private Vector3 _contactPoint = Vector3.zero;
+        private Vector3 _contactPoint = Vector3.zero;
+        private const float Tolerance = 0.05f;
+        private const float TinyTolerance = 0.01f;
+        private const string TemporaryLayer = "TempCast";
+        private int TemporaryLayerIndex;
 
-    private const float TinyTolerance = 0.01f;
-    private const string TemporaryLayer = "TempCast";
-    private int TemporaryLayerIndex;
-
-    private void Awake()
-    {
-        TemporaryLayerIndex = LayerMask.NameToLayer(TemporaryLayer);
-    }
-
-    void LateUpdate()
-    {
-        PushBack();
-    }
-
-    private void PushBack()
-    {
-        if (spheres != null)
+        private void Awake()
         {
-            _onContacted = false;
+            TemporaryLayerIndex = LayerMask.NameToLayer(TemporaryLayer);
 
-            _contactPoint = Vector3.zero;
-
-            for (int i = 0; i < spheres.Length; i++)
+            if (target == null)
             {
-                CollisionSphere s = spheres[i];
-                
-                Vector3 spherePosition = SpherePosition(s);
+                target = transform;
+            }
+        }
 
-                float sphereRadius = s.radius;
-                
-                bool isConcatedSucceeded = false;
+        void LateUpdate()
+        {
+            PushBack();
+        }
 
-                if (s != null)
+        private void PushBack()
+        {
+            if (spheres != null)
+            {
+                _onContacted = false;
+
+                _contactPoint = Vector3.zero;
+
+                for (int i = 0; i < spheres.Length; i++)
                 {
-                    foreach (Collider col in Physics.OverlapSphere( spherePosition, sphereRadius ) )
+                    CollisionSphere s = spheres[i];
+
+                    Vector3 spherePosition = SpherePosition(s);
+
+                    float sphereRadius = s.radius;
+
+                    bool isConcatedSucceeded = false;
+
+                    if (s != null)
                     {
-                        isConcatedSucceeded = CharacterCollisions.ClosestPointOnSurface(col, spherePosition,out _contactPoint);
-
-                        if (isConcatedSucceeded)
+                        foreach (Collider col in Physics.OverlapSphere(spherePosition, sphereRadius))
                         {
-                            DebugDrawer.DrawMarker(_contactPoint, 5, Color.blue, 0);
+                            isConcatedSucceeded = CharacterCollisions.ClosestPointOnSurface(col, spherePosition, out _contactPoint);
 
-                            Vector3 v = _contactPoint - spherePosition;
-
-                            // 先保存被碰撞对象的层Id
-                            int layer = col.gameObject.layer;
-
-                            //通过设置临时Layer，将除当前被碰撞体以外的物体忽略掉。
-                            col.gameObject.layer = TemporaryLayerIndex;
-
-                            // 从CollisionSphere的中点向接触点的方向发射一条射线，检测CollisionSphere的中点是否在被碰撞体的内部。
-                            bool facingNormal = Physics.SphereCast(new Ray(spherePosition, v.normalized), TinyTolerance, v.magnitude + TinyTolerance, 1 << TemporaryLayerIndex);
-
-                            col.gameObject.layer = layer;
-
-                            if (facingNormal)
+                            if (isConcatedSucceeded)
                             {
-                                //CollisionSphere在被碰撞体的外部
-                                if (Vector3.Distance(spherePosition, _contactPoint) < sphereRadius)
+                                DebugDrawer.DrawMarker(_contactPoint, 5, Color.blue, 0);
+
+                                Vector3 v = _contactPoint - spherePosition;
+
+                                // 先保存被碰撞对象的层Id
+                                int layer = col.gameObject.layer;
+
+                                //通过设置临时Layer，将除当前被碰撞体以外的物体忽略掉。
+                                col.gameObject.layer = TemporaryLayerIndex;
+
+                                // 从CollisionSphere的中点向接触点的方向发射一条射线，检测CollisionSphere的中点是否在被碰撞体的内部。
+                                bool facingNormal = Physics.SphereCast(new Ray(spherePosition, v.normalized), TinyTolerance, v.magnitude + TinyTolerance, 1 << TemporaryLayerIndex);
+
+                                col.gameObject.layer = layer;
+
+                                if (facingNormal)
                                 {
-                                    //CollisionSphere的半径减去向量的模得到反推的距离，然后反转得到反推的向量
-                                    v = v.normalized * (sphereRadius - v.magnitude) * -1;
+                                    //CollisionSphere在被碰撞体的外部
+                                    if (Vector3.Distance(spherePosition, _contactPoint) < sphereRadius)
+                                    {
+                                        //CollisionSphere的半径减去向量的模得到反推的距离，然后反转得到反推的向量
+                                        v = v.normalized * (sphereRadius - v.magnitude) * -1;
+                                    }
+                                    else
+                                    {
+                                        continue;
+                                    }
                                 }
                                 else
                                 {
-                                    continue;
+                                    //CollisionSphere在被碰撞体的内部
+                                    v = v.normalized * (sphereRadius + v.magnitude);
                                 }
-                            }
-                            else
-                            {
-                                //CollisionSphere在被碰撞体的内部
-                                v = v.normalized * (sphereRadius + v.magnitude);
-                            }
 
-                            target.position += v;
+                                target.position += v;
 
-                            
+
+                            }
                         }
                     }
                 }
             }
         }
-    }
 
-    private void OnDrawGizmos()
-    {
-
-        if (spheres != null)
+        private void OnDrawGizmos()
         {
-            for (int i = 0; i < spheres.Length; ++i)
+
+            if (spheres != null)
             {
-                Gizmos.color = spheres[i].isFeet ? Color.green : (spheres[i].isHead ? Color.yellow : Color.cyan);
-                Gizmos.DrawWireSphere(SpherePosition(spheres[i]), spheres[i].radius);
-                if (_onContacted)
+                for (int i = 0; i < spheres.Length; ++i)
                 {
-                    Gizmos.DrawLine(SpherePosition(spheres[i]), SpherePosition(spheres[i]) - _contactPoint);
+                    Gizmos.color = spheres[i].isFeet ? Color.green : (spheres[i].isHead ? Color.yellow : Color.cyan);
+                    Gizmos.DrawWireSphere(SpherePosition(spheres[i]), spheres[i].radius);
+                    if (_onContacted)
+                    {
+                        Gizmos.DrawLine(SpherePosition(spheres[i]), SpherePosition(spheres[i]) - _contactPoint);
+                    }
+
                 }
-                
             }
+
         }
 
+        private Vector3 SpherePosition(CollisionSphere sphere)
+        {
+            Vector3 ret = Vector3.zero;
+            if (target != null)
+            {
+                ret = target.position;
+            }
+            else
+            {
+                ret = transform.position;
+            }
+
+            ret.y += sphere.offset;
+
+            return ret;
+        }
     }
 
-    private Vector3 SpherePosition(CollisionSphere sphere)
-    {
-        Vector3 ret = Vector3.zero;
-        if (target != null)
-        {
-            ret = target.position;
-        }
-        else
-        {
-            ret = transform.position;
-        }
-
-        ret.y += sphere.offset;
-
-        return ret;
-    }
 }
