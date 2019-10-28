@@ -14,6 +14,25 @@ namespace ThirdPersonCharaterController
         public bool isFeet = false;
         public float offset = 0;
         public float radius = 0.5f;
+
+        public Vector3 localPosition {
+            get
+            {
+                if (_controller != null)
+                {
+                    Vector3 ret = _controller.worldPosition;
+                    ret.y += offset;
+                    return ret;
+                }
+                else
+                {
+                    return new Vector3(0,offset,0);
+                }
+            }
+        }
+
+        private CharacterController _controller;
+
         public CollisionSphere()
         {
 
@@ -26,6 +45,11 @@ namespace ThirdPersonCharaterController
             this.offset = Offset;
             this.radius = radius;
         }
+
+        public void AttachController(CharacterController controller)
+        {
+            _controller = controller;
+        }
     }
 
     public class CharacterController : MonoBehaviour
@@ -35,6 +59,11 @@ namespace ThirdPersonCharaterController
 
         [SerializeField]
         public float radius = 0.5f;
+
+        [SerializeField]
+        QueryTriggerInteraction triggerInteraction;
+
+        public LayerMask Walkable;
 
         public Vector3 up {
             get
@@ -79,8 +108,14 @@ namespace ThirdPersonCharaterController
             }
         }
 
+        public GroundCollider currentGround { get; private set; }
+
+        public CollisionSphere head { get; private set; }
+
+        public CollisionSphere feet { get; private set; }
+
         [SerializeField]
-        private CollisionSphere[] spheres = new CollisionSphere[3]{
+        public CollisionSphere[] spheres = new CollisionSphere[3]{
         new CollisionSphere(false,true,-0.5f),
         new CollisionSphere(false,false,0),
         new CollisionSphere(true,false,0.5f)
@@ -102,10 +137,32 @@ namespace ThirdPersonCharaterController
             {
                 target = transform;
             }
+
+            currentGround = new GroundCollider(Walkable, this, triggerInteraction, Tolerance, TinyTolerance);
+
+            foreach (CollisionSphere sphere in spheres)
+            {
+                sphere.AttachController(this);
+
+                if (sphere.isFeet)
+                    feet = sphere;
+
+                if (sphere.isHead)
+                    head = sphere;
+            }
+
+            if (feet == null)
+                Debug.LogError("[SuperCharacterController] Feet not found on controller");
+
+            if (head == null)
+                Debug.LogError("[SuperCharacterController] Head not found on controller");
         }
+
 
         void LateUpdate()
         {
+            currentGround.ProbeGround(SpherePosition(feet),1);
+
             PushBack();
         }
 
@@ -131,11 +188,11 @@ namespace ThirdPersonCharaterController
                     {
                         foreach (Collider col in Physics.OverlapSphere(spherePosition, sphereRadius))
                         {
-                            isConcatedSucceeded = CharacterCollisions.ClosestPointOnSurface(col, spherePosition, out _contactPoint);
+                            isConcatedSucceeded = CharacterCollisions.ClosestPointOnSurface(col, spherePosition,sphereRadius, out _contactPoint);
 
                             if (isConcatedSucceeded)
                             {
-                                DebugDrawer.DrawMarker(_contactPoint, 5, Color.blue, 0);
+                                DebugDrawer.DrawMarker(_contactPoint, 1, Color.red, 0);
 
                                 Vector3 v = _contactPoint - spherePosition;
 
@@ -198,7 +255,7 @@ namespace ThirdPersonCharaterController
 
         }
 
-        private Vector3 SpherePosition(CollisionSphere sphere)
+        public Vector3 SpherePosition(CollisionSphere sphere)
         {
             Vector3 ret = Vector3.zero;
             if (target != null)

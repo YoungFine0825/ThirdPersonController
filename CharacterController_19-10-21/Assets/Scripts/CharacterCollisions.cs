@@ -8,47 +8,30 @@ namespace ThirdPersonCharaterController
 
     public class CharacterCollisions
     {
-
-        public static Vector3 ClosestPointOnSurface(SphereCollider col, Vector3 to)
-        {
-            Vector3 p = Vector3.zero;
-
-            p = to - col.transform.position;
-
-            p.Normalize();
-
-            p *= col.radius * col.transform.localScale.x;
-
-            p += col.transform.position;
-
-            return p;
-        }
-
-
-        public static Vector3 ClosestPointOnSurface(BoxCollider col, Vector3 to)
-        {
-            if (col.transform.rotation == Quaternion.identity)
-            {
-                return col.ClosestPointOnBounds(to);
-            }
-            else
-            {
-                return ClosestOnOBB(col, to);
-            }
-        }
-
-
-        public static bool ClosestPointOnSurface(Collider col, Vector3 to, out Vector3 concatPoint)
+        public static bool ClosestPointOnSurface(Collider col, Vector3 to, float radius,out Vector3 concatPoint)
         {
             bool isConcated = true;
 
             if (col is BoxCollider)
             {
-                concatPoint = CharacterCollisions.ClosestPointOnSurface((BoxCollider)col, to);
+                concatPoint = ClosestOnOBB((BoxCollider)col, to);
             }
             else if (col is SphereCollider)
             {
-                concatPoint = CharacterCollisions.ClosestPointOnSurface((SphereCollider)col, to);
+                concatPoint = col.ClosestPointOnBounds(to);
+            }
+            else if (col is MeshCollider)
+            {
+                BSPTree bsp = col.gameObject.GetComponent<BSPTree>();
+                if (bsp != null)
+                {
+                    concatPoint = bsp.ClosestPointOn(to,radius);
+                }
+                else
+                {
+                    concatPoint = col.ClosestPointOnBounds(to);
+                }
+                
             }
             else
             {

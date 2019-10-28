@@ -110,8 +110,8 @@ public class SuperCharacterController : MonoBehaviour
     private const float TinyTolerance = 0.01f;
     private const string TemporaryLayer = "TempCast";
     private const int MaxPushbackIterations = 2;
-    private int TemporaryLayerIndex;
-    private float fixedDeltaTime;
+    private int _temporaryLayerIndex;
+    private float _fixedDeltaTime;
 
     private static SuperCollisionType defaultCollisionType;
 
@@ -119,14 +119,14 @@ public class SuperCharacterController : MonoBehaviour
     {
         collisionData = new List<SuperCollision>();
 
-        TemporaryLayerIndex = LayerMask.NameToLayer(TemporaryLayer);
+        _temporaryLayerIndex = LayerMask.NameToLayer(TemporaryLayer);
 
         ignoredColliders = new List<Collider>();
         ignoredColliderStack = new List<IgnoredCollider>();
 
         currentlyClampedTo = null;
 
-        fixedDeltaTime = 1.0f / fixedUpdatesPerSecond;
+        _fixedDeltaTime = 1.0f / fixedUpdatesPerSecond;
 
         heightScale = 1.0f;
 
@@ -176,13 +176,13 @@ public class SuperCharacterController : MonoBehaviour
         {
             float delta = Time.deltaTime;
 
-            while (delta > fixedDeltaTime)
+            while (delta > _fixedDeltaTime)
             {
-                deltaTime = fixedDeltaTime;
+                deltaTime = _fixedDeltaTime;
 
                 SingleUpdate();
 
-                delta -= fixedDeltaTime;
+                delta -= _fixedDeltaTime;
             }
 
             if (delta > 0f)
@@ -359,10 +359,10 @@ public class SuperCharacterController : MonoBehaviour
                     // Cache the collider's layer so that we can cast against it
                     int layer = col.gameObject.layer;
 
-                    col.gameObject.layer = TemporaryLayerIndex;
+                    col.gameObject.layer = _temporaryLayerIndex;
 
                     // Check which side of the normal we are on
-                    bool facingNormal = Physics.SphereCast(new Ray(position, v.normalized), TinyTolerance, v.magnitude + TinyTolerance, 1 << TemporaryLayerIndex);
+                    bool facingNormal = Physics.SphereCast(new Ray(position, v.normalized), TinyTolerance, v.magnitude + TinyTolerance, 1 << _temporaryLayerIndex);
 
                     col.gameObject.layer = layer;
 
@@ -388,12 +388,12 @@ public class SuperCharacterController : MonoBehaviour
 
                     transform.position += v;
 
-                    col.gameObject.layer = TemporaryLayerIndex;
+                    col.gameObject.layer = _temporaryLayerIndex;
 
                     // Retrieve the surface normal of the collided point
                     RaycastHit normalHit;
 
-                    Physics.SphereCast(new Ray(position + v, contactPoint - (position + v)), TinyTolerance, out normalHit, 1 << TemporaryLayerIndex);
+                    Physics.SphereCast(new Ray(position + v, contactPoint - (position + v)), TinyTolerance, out normalHit, 1 << _temporaryLayerIndex);
 
                     col.gameObject.layer = layer;
 
@@ -445,7 +445,7 @@ public class SuperCharacterController : MonoBehaviour
         {
             Collider col = ignoredColliders[i];
             ignoredColliderStack.Add(new IgnoredCollider(col, col.gameObject.layer));
-            col.gameObject.layer = TemporaryLayerIndex;
+            col.gameObject.layer = _temporaryLayerIndex;
         }
     }
 
@@ -583,6 +583,8 @@ public class SuperCharacterController : MonoBehaviour
 
                 superCollisionType = superColType;
                 transform = hit.transform;
+
+                DebugDraw.DrawVector(hit.point, hit.normal, 5, 3, Color.yellow, 0);
 
                 // By reducing the initial SphereCast's radius by Tolerance, our casted sphere no longer fits with
                 // our controller's shape. Reconstruct the sphere cast with the proper radius
@@ -851,6 +853,8 @@ public class SuperCharacterController : MonoBehaviour
 
             Vector3 secondaryOrigin = controller.transform.position + controller.up * Tolerance;
 
+            DebugDraw.DrawMarker(secondaryOrigin, 4, Color.red, 0);
+
             if (!Mathf.Approximately(groundAngle, 0))
             {
                 float horizontal = Mathf.Sin(groundAngle) * controller.radius;
@@ -862,11 +866,15 @@ public class SuperCharacterController : MonoBehaviour
 
                 secondaryOrigin += Math3d.ProjectVectorOnPlane(controller.up, v2).normalized * horizontal + controller.up * vertical;
             }
-            
+
+            DebugDraw.DrawVector(secondaryOrigin, controller.down, 5, 4, Color.blue, 0);
+
             if (Physics.Raycast(secondaryOrigin, controller.down, out hit, Mathf.Infinity, walkable, triggerInteraction))
             {
                 // Remove the tolerance from the distance travelled
                 hit.distance -= Tolerance + TinyTolerance;
+
+                DebugDraw.DrawVector(hit.point, hit.normal, 5, 4,Color.magenta, 0);
 
                 return true;
             }
