@@ -54,10 +54,7 @@ namespace ThirdPersonCharaterController
 
     public class CharacterController : MonoBehaviour
     {
-        [SerializeField]
-        public Transform target;
-
-        [SerializeField]
+        
         public float radius = 0.5f;
 
         [SerializeField]
@@ -65,17 +62,16 @@ namespace ThirdPersonCharaterController
 
         public LayerMask Walkable;
 
+        public bool IsClampToGround = true;
+
+        public CharacterCameraController _cameraController;
+
+        public bool IsDebug = true;
+
         public Vector3 up {
             get
             {
-                if (target != null)
-                {
-                    return target.up;
-                }
-                else
-                {
-                    return transform.up;
-                }
+                return transform.up;
             }
         }
 
@@ -83,28 +79,14 @@ namespace ThirdPersonCharaterController
         {
             get
             {
-                if (target != null)
-                {
-                    return -target.up;
-                }
-                else
-                {
-                    return -transform.up;
-                }
+                return -transform.up;
             }
         }
 
         public Vector3 worldPosition {
             get
             {
-                if (target != null)
-                {
-                    return target.transform.position;
-                }
-                else
-                {
-                    return transform.position;
-                }
+                return transform.position;
             }
         }
 
@@ -116,9 +98,9 @@ namespace ThirdPersonCharaterController
 
         [SerializeField]
         public CollisionSphere[] spheres = new CollisionSphere[3]{
-        new CollisionSphere(false,true,-0.5f),
-        new CollisionSphere(false,false,0),
-        new CollisionSphere(true,false,0.5f)
+        new CollisionSphere(false,true,0.5f),
+        new CollisionSphere(false,false,1.0f),
+        new CollisionSphere(true,false,1.5f)
         };
 
         private bool _onContacted = false;
@@ -132,11 +114,6 @@ namespace ThirdPersonCharaterController
         private void Awake()
         {
             TemporaryLayerIndex = LayerMask.NameToLayer(TemporaryLayer);
-
-            if (target == null)
-            {
-                target = transform;
-            }
 
             currentGround = new GroundCollider(Walkable, this, triggerInteraction, Tolerance, TinyTolerance);
 
@@ -156,18 +133,47 @@ namespace ThirdPersonCharaterController
 
             if (head == null)
                 Debug.LogError("[SuperCharacterController] Head not found on controller");
+
         }
 
 
-        void LateUpdate()
+        void Update()
         {
-            currentGround.ProbeGround(SpherePosition(feet),1);
 
-            PushBack();
+            if (CharacterInputController.Instance.current.MoveInput != Vector3.zero)
+            {
+                Movement();
+            }
+            
+
+            CheckPosition();
         }
 
-        private void PushBack()
+        private void Movement()
         {
+            Vector3 dir = _cameraController.lookDirection;
+            transform.rotation = Quaternion.LookRotation(dir, up);
+
+            transform.position += transform.forward +  CharacterInputController.Instance.current.MoveInput * (5 * Time.deltaTime);
+        }
+
+        private void CheckPosition()
+        {
+            currentGround.ProbeGround(SpherePosition(feet), 1);
+
+            PushBack(1, 1);
+
+            currentGround.ProbeGround(SpherePosition(feet), 2);
+
+            if (IsClampToGround)
+            {
+                ClmapToGround();
+            }
+        }
+
+        private void PushBack(int iter,int maxIter)
+        {
+
             if (spheres != null)
             {
                 _onContacted = false;
@@ -192,7 +198,7 @@ namespace ThirdPersonCharaterController
 
                             if (isConcatedSucceeded)
                             {
-                                DebugDrawer.DrawMarker(_contactPoint, 1, Color.red, 0);
+                                DebugDrawer.DrawMarker(_contactPoint, 2, Color.red, 0);
 
                                 Vector3 v = _contactPoint - spherePosition;
 
@@ -226,50 +232,61 @@ namespace ThirdPersonCharaterController
                                     v = v.normalized * (sphereRadius + v.magnitude);
                                 }
 
-                                target.position += v;
+                                transform.position += v;
 
+                                _onContacted = true;
 
                             }
                         }
                     }
                 }
             }
+
+            if (iter < maxIter && _onContacted)
+            {
+                PushBack(++iter, maxIter);
+            }
         }
 
         private void OnDrawGizmos()
         {
-
+            if (!IsDebug)
+            {
+                return;
+            }
             if (spheres != null)
             {
                 for (int i = 0; i < spheres.Length; ++i)
                 {
                     Gizmos.color = spheres[i].isFeet ? Color.green : (spheres[i].isHead ? Color.yellow : Color.cyan);
                     Gizmos.DrawWireSphere(SpherePosition(spheres[i]), spheres[i].radius);
-                    if (_onContacted)
-                    {
-                        Gizmos.DrawLine(SpherePosition(spheres[i]), SpherePosition(spheres[i]) - _contactPoint);
-                    }
-
                 }
             }
 
         }
 
-        public Vector3 SpherePosition(CollisionSphere sphere)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sphere"></param>
+        /// <returns></returns>
+        private Vector3 SpherePosition(CollisionSphere sphere)
         {
-            Vector3 ret = Vector3.zero;
-            if (target != null)
-            {
-                ret = target.position;
-            }
-            else
-            {
-                ret = transform.position;
-            }
+            Vector3 ret = transform.position;
 
             ret.y += sphere.offset;
 
             return ret;
+        }
+
+
+        /// <summary>
+        /// 减去与当前地面的距离，已达到紧贴地面的效果
+        /// </summary>
+        private void ClmapToGround()
+        {
+            float dis = currentGround.GetDistance();
+            transform.position -= up * dis;
         }
     }
 

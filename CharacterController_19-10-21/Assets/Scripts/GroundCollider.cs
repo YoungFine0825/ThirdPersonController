@@ -86,11 +86,10 @@ namespace ThirdPersonCharaterController
             {
                 //拿到地面物体的碰撞属性
                 GroundCollisionAttribute collisionAttr = hit.collider.GetComponent<GroundCollisionAttribute>();
-                if (collisionAttr == null)
+                if (collisionAttr != null)
                 {
-                    collisionAttr = hit.collider.gameObject.AddComponent<GroundCollisionAttribute>();
+                    collisionAttribute = collisionAttr;
                 }
-                collisionAttribute = collisionAttr;
 
                 DebugDrawer.DrawVector(hit.point, hit.normal, 4, 2, Color.yellow, 0);
 
@@ -120,11 +119,10 @@ namespace ThirdPersonCharaterController
             {
                 //拿到地面物体的碰撞属性
                 GroundCollisionAttribute collisionAttr = hit.collider.GetComponent<GroundCollisionAttribute>();
-                if (collisionAttr == null)
+                if (collisionAttr != null)
                 {
-                    collisionAttr = hit.collider.gameObject.AddComponent<GroundCollisionAttribute>();
+                    collisionAttribute = collisionAttr;
                 }
-                collisionAttribute = collisionAttr;
 
                 RaycastHit sphereHit;
 
@@ -147,27 +145,12 @@ namespace ThirdPersonCharaterController
         }
 
 
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <returns></returns>
-        public bool isGrounded()
-        {
-            return _primaryGround != null;
-        }
-
-
         private bool SimulateSphereCast(Vector3 groundNormal, out RaycastHit hit)
         {
 
             float groundAngle = Vector3.Angle(groundNormal, _controller.up) * Mathf.Deg2Rad;
 
-            Vector3 secondaryOrigin = _controller.feet.localPosition;
-
-            secondaryOrigin.y -= _controller.feet.radius;
-
-            secondaryOrigin += _controller.up * _tolerance;
+            Vector3 secondaryOrigin = _controller.worldPosition + _controller.up * _tolerance;
 
             if (!Mathf.Approximately(groundAngle, 0))
             {
@@ -200,6 +183,46 @@ namespace ThirdPersonCharaterController
             {
                 return false;
             }
+        }
+
+
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public bool isGrounded()
+        {
+            return _primaryGround != null;
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public float GetDistance()
+        {
+            if (_primaryGround != null)
+            {
+                return _primaryGround.distance;
+            }
+            return 0;
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public Vector3 GetNormal()
+        {
+            if (_primaryGround != null)
+            {
+                return _primaryGround.normal;
+            }
+            return Vector3.zero;
         }
     }
 }
