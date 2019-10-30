@@ -23,7 +23,7 @@ namespace ThirdPersonCharaterController
 
 
         private LayerMask _walkableLayer;
-        private CharacterController _controller;
+        private CharacterMotionController _controller;
         private QueryTriggerInteraction _triggerInteraction;
 
         private GroundHit _primaryGround;
@@ -44,7 +44,7 @@ namespace ThirdPersonCharaterController
 
         public GroundCollider(
             LayerMask walkable, 
-            CharacterController controller, 
+            CharacterMotionController controller, 
             QueryTriggerInteraction triggerInteraction,
             float tolerance = 0.05f,
             float tinyTolerance = 0.01f)
@@ -85,17 +85,13 @@ namespace ThirdPersonCharaterController
             if (Physics.SphereCast(o, smallerRadius, down, out hit, Mathf.Infinity, _walkableLayer, _triggerInteraction))
             {
                 //拿到地面物体的碰撞属性
-                GroundCollisionAttribute collisionAttr = hit.collider.GetComponent<GroundCollisionAttribute>();
-                if (collisionAttr != null)
-                {
-                    collisionAttribute = collisionAttr;
-                }
+                collisionAttribute = hit.collider.GetComponent<GroundCollisionAttribute>();
 
-                DebugDrawer.DrawVector(hit.point, hit.normal, 4, 2, Color.yellow, 0);
+                DebugDrawer.DrawVector(hit.point, hit.normal, 2.5f, 1, Color.yellow, 0);
 
                 //transform = hit.transform;
 
-                //检测碰撞到是不是真正的地面（因为有可能碰撞到的是一个陡坡）
+                //检测碰撞到是不是真正的地面（因为通过投射Sphere检测到的碰撞物体的法线是一个差值，需要得到地面的实际碰撞信息）
                 SimulateSphereCast(hit.normal, out hit);
 
                 //_primaryGround = new GroundHit(hit.point, hit.normal, hit.distance);
@@ -118,11 +114,7 @@ namespace ThirdPersonCharaterController
             else if (Physics.Raycast(o, down, out hit, Mathf.Infinity, _walkableLayer, _triggerInteraction))
             {
                 //拿到地面物体的碰撞属性
-                GroundCollisionAttribute collisionAttr = hit.collider.GetComponent<GroundCollisionAttribute>();
-                if (collisionAttr != null)
-                {
-                    collisionAttribute = collisionAttr;
-                }
+                collisionAttribute = hit.collider.GetComponent<GroundCollisionAttribute>();
 
                 RaycastHit sphereHit;
 
@@ -168,14 +160,14 @@ namespace ThirdPersonCharaterController
                 secondaryOrigin += v3.normalized * hor + _controller.up * ver;
             }
 
-            DebugDrawer.DrawVector(secondaryOrigin, _controller.down, 5, 2, Color.blue, 0);
+            DebugDrawer.DrawVector(secondaryOrigin, _controller.down, 3, 1, Color.blue, 0);
 
-            //向正下方发射射线检测(注意这里是发射的射线不是Sphere)是否碰撞地面
+            //向正下方发射射线检测(注意这里是发射的射线不是Sphere)得到实际地面的法线
             if (Physics.Raycast(secondaryOrigin, _controller.down, out hit, Mathf.Infinity, _walkableLayer, _triggerInteraction))
             {
                 hit.distance -= _tolerance + _tinyTolerance;
 
-                DebugDrawer.DrawVector(hit.point, hit.normal, 5, 2, Color.magenta, 0);
+                DebugDrawer.DrawVector(hit.point, hit.normal, 3, 1, Color.magenta, 0);
 
                 return true;
             }

@@ -31,7 +31,7 @@ namespace ThirdPersonCharaterController
             }
         }
 
-        private CharacterController _controller;
+        private CharacterMotionController _controller;
 
         public CollisionSphere()
         {
@@ -46,13 +46,13 @@ namespace ThirdPersonCharaterController
             this.radius = radius;
         }
 
-        public void AttachController(CharacterController controller)
+        public void AttachController(CharacterMotionController controller)
         {
             _controller = controller;
         }
     }
 
-    public class CharacterController : MonoBehaviour
+    public class CharacterMotionController : MonoBehaviour
     {
         
         public float radius = 0.5f;
@@ -146,18 +146,38 @@ namespace ThirdPersonCharaterController
             }
             
 
-            CheckPosition();
+            CorrectingPosition();
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         private void Movement()
         {
             Vector3 dir = _cameraController.lookDirection;
             transform.rotation = Quaternion.LookRotation(dir, up);
 
-            transform.position += transform.forward +  CharacterInputController.Instance.current.MoveInput * (5 * Time.deltaTime);
+            Vector3 moveInput = CharacterInputController.Instance.current.MoveInput;
+            Vector3 moveDir = Vector3.zero;
+
+            if (moveInput.x != 0)
+            {
+                moveDir += -Vector3.Cross(dir, up) * moveInput.x;
+            }
+            if (moveInput.z != 0)
+            {
+                moveDir += dir * moveInput.z;
+            }
+
+            transform.position +=  moveDir.normalized * (5 * Time.deltaTime);
         }
 
-        private void CheckPosition()
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        private void CorrectingPosition()
         {
             currentGround.ProbeGround(SpherePosition(feet), 1);
 
