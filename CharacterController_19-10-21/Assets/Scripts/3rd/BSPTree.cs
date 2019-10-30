@@ -205,8 +205,8 @@ public class BSPTree : MonoBehaviour {
         {
             posNode.triangles = positiveTriangles.ToArray();
 
-            if (drawMeshTreeOnStart)
-                DrawTriangleSet(posNode.triangles, DebugDraw.RandomColor());
+            //if (drawMeshTreeOnStart)
+            //    DrawTriangleSet(posNode.triangles, DebugDraw.RandomColor());
         }
 
         if (negativeTriangles.Count < triangles.Count && negativeTriangles.Count > 3)
@@ -217,8 +217,8 @@ public class BSPTree : MonoBehaviour {
         {
             negNode.triangles = negativeTriangles.ToArray();
 
-            if (drawMeshTreeOnStart)
-                DrawTriangleSet(negNode.triangles, DebugDraw.RandomColor());
+            //if (drawMeshTreeOnStart)
+            //    DrawTriangleSet(negNode.triangles, DebugDraw.RandomColor());
         }
 
     }
@@ -369,9 +369,9 @@ public class BSPTree : MonoBehaviour {
 
     void DrawTriangleSet(int[] triangles, Color color)
     {
-        foreach (int triangle in triangles)
-        {
-            DebugDraw.DrawTriangle(vertices[tris[triangle]], vertices[tris[triangle + 1]], vertices[tris[triangle + 2]], color, transform);
-        }
+        //foreach (int triangle in triangles)
+        //{
+        //    DebugDraw.DrawTriangle(vertices[tris[triangle]], vertices[tris[triangle + 1]], vertices[tris[triangle + 2]], color, transform);
+        //}
     }
 }
