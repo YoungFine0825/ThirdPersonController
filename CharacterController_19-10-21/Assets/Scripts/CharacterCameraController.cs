@@ -9,13 +9,15 @@ namespace ThirdPersonCharaterController
 
         public Transform focus;
 
+        public CharacterMotionController actMotionController;
+
         public float Distance = 5.0f;
 
         public float Height = 2.0f;
 
         public Vector3 lookDirection { get; private set; }
 
-        private CharacterMotionController _actMotionController;
+        
 
         private float _yRotation = 0;
 
@@ -24,16 +26,23 @@ namespace ThirdPersonCharaterController
         {
             if (focus != null)
             {
-                _actMotionController = focus.GetComponent<CharacterMotionController>();
-
                 lookDirection = focus.forward;
+            }
+            else
+            {
+                lookDirection = transform.forward;
             }
         }
 
         private void LateUpdate()
         {
-           
-            lookDirection = Quaternion.AngleAxis(CharacterInputController.Instance.current.LookInput.x, _actMotionController.up) * lookDirection;
+
+            if (actMotionController == null)
+            {
+                return;
+            }
+
+            lookDirection = Quaternion.AngleAxis(CharacterInputController.Instance.current.LookInput.x, actMotionController.up) * lookDirection;
 
             transform.position = focus.position;
 
@@ -41,15 +50,15 @@ namespace ThirdPersonCharaterController
 
             _yRotation += CharacterInputController.Instance.current.LookInput.y;
 
-            Vector3 left = Vector3.Cross(lookDirection, _actMotionController.up);
+            Vector3 left = Vector3.Cross(lookDirection, actMotionController.up);
 
-            transform.rotation = Quaternion.LookRotation(lookDirection, _actMotionController.up);
+            transform.rotation = Quaternion.LookRotation(lookDirection, actMotionController.up);
             transform.rotation = Quaternion.AngleAxis(_yRotation, left) * transform.rotation;
 
             DebugDrawer.DrawMarker(transform.position, 2, Color.red, 0);
 
             transform.position -= transform.forward * Distance;
-            transform.position += _actMotionController.up * Height;
+            transform.position += actMotionController.up * Height;
 
             DebugDrawer.DrawMarker(transform.position, 2, Color.green, 0);
 

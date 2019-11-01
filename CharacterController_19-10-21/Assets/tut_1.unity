@@ -378,6 +378,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   focus: {fileID: 1547821084}
+  actMotionController: {fileID: 1547821081}
   Distance: 5
   Height: 2
 --- !u!1 &1033831048
@@ -856,6 +857,7 @@ MonoBehaviour:
   IsClampToGround: 1
   _cameraController: {fileID: 982680374}
   IsDebug: 1
+  IsDebugGroundCollision: 0
 --- !u!4 &1547821084
 Transform:
   m_ObjectHideFlags: 0

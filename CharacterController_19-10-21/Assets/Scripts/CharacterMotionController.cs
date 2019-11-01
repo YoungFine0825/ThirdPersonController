@@ -68,6 +68,8 @@ namespace ThirdPersonCharaterController
 
         public bool IsDebug = true;
 
+        public bool IsDebugGroundCollision = false;
+
         public Vector3 up {
             get
             {

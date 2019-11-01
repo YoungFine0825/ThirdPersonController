@@ -84,11 +84,26 @@ namespace ThirdPersonCharaterController
             //向正下方投射Sphere看是是否碰撞到物体了
             if (Physics.SphereCast(o, smallerRadius, down, out hit, Mathf.Infinity, _walkableLayer, _triggerInteraction))
             {
+                float standAngle = 0;
+                float slopeLimit = 0;
                 //拿到地面物体的碰撞属性
                 collisionAttribute = hit.collider.GetComponent<GroundCollisionAttribute>();
+                if (collisionAttribute != null)
+                {
+                    standAngle = collisionAttribute.StandAngle;
+                    slopeLimit = collisionAttribute.SlopeLimit;
+                }
+                else
+                {
+                    standAngle = GroundCollisionAttribute.DEFAULT_STAND_ANGLE;
+                    slopeLimit = GroundCollisionAttribute.DEFAULT_SLOPE_LIMIT;
+                }
 
-                DebugDrawer.DrawVector(hit.point, hit.normal, 2.5f, 1, Color.yellow, 0);
-
+                if (_controller.IsDebugGroundCollision)
+                {
+                    DebugDrawer.DrawVector(hit.point, hit.normal, 2.5f, 1, Color.yellow, 0);
+                }
+                
                 //transform = hit.transform;
 
                 //检测碰撞到是不是真正的地面（因为通过投射Sphere检测到的碰撞物体的法线是一个差值，需要得到地面的实际碰撞信息）
@@ -107,8 +122,46 @@ namespace ThirdPersonCharaterController
                     transform = hit.transform;
                 }
 
-                //Vector3 toCenter = Math3d.ProjectVectorOnPlane(up, (_controller.worldPosition - hit.point).normalized * _tinyTolerance);
+                Vector3 toCenter = Math3d.ProjectVectorOnPlane(up, (_controller.worldPosition - hit.point).normalized * _tinyTolerance);
 
+                Vector3 awayFromCenter = Quaternion.AngleAxis(-80.0f, Vector3.Cross(toCenter, _controller.up)) * -toCenter;
+
+                Vector3 nearPoint = hit.point + toCenter + (_controller.up * _tolerance);
+
+                Vector3 farPoint = hit.point + (awayFromCenter * 3);
+
+                RaycastHit nearHit;
+                RaycastHit farHit;
+
+                Physics.Raycast(nearPoint, _controller.down, out nearHit, Mathf.Infinity, _walkableLayer, _triggerInteraction);
+                Physics.Raycast(farPoint, _controller.down, out farHit, Mathf.Infinity, _walkableLayer, _triggerInteraction);
+
+                _nearGround = new GroundHit(nearHit.point, nearHit.normal, nearHit.distance);
+                _farGround = new GroundHit(farHit.point, farHit.normal, farHit.distance);
+
+                if (Vector3.Angle(hit.normal, _controller.up) > standAngle)
+                {//碰撞到的面是了一个陡坡或墙（碰撞面的法线与控制器正上方向的夹角大于设置的标准角度）
+                    
+
+                    //计算平行于碰撞表面且向下的向量
+                    Vector3 r = Vector3.Cross(hit.normal,_controller.down);
+                    Vector3 v = Vector3.Cross(r, hit.normal);
+
+                    Vector3 flushOrigin = hit.point + hit.normal * _tolerance;
+
+                    RaycastHit flushHit;
+
+                    //沿着碰撞面向下发射射线检测碰撞的表面
+                    if (Physics.Raycast(flushOrigin, v, out flushHit, Mathf.Infinity, _walkableLayer, _triggerInteraction))
+                    {
+                        RaycastHit forTruethfulNormal;
+                        //校正法线
+                        if (SimulateSphereCast(flushHit.normal, out forTruethfulNormal))
+                        {
+                            _flushGround = new GroundHit(forTruethfulNormal.point, forTruethfulNormal.normal, forTruethfulNormal.distance);
+                        }
+                    }
+                }
 
             }
             else if (Physics.Raycast(o, down, out hit, Mathf.Infinity, _walkableLayer, _triggerInteraction))
@@ -137,6 +190,12 @@ namespace ThirdPersonCharaterController
         }
 
 
+        /// <summary>
+        /// 校正SphereCast得到的法线（如cast的位置在几个面连接处，那么得到的法线是一个插值）
+        /// </summary>
+        /// <param name="groundNormal"></param>
+        /// <param name="hit"></param>
+        /// <returns></returns>
         private bool SimulateSphereCast(Vector3 groundNormal, out RaycastHit hit)
         {
 
@@ -160,15 +219,22 @@ namespace ThirdPersonCharaterController
                 secondaryOrigin += v3.normalized * hor + _controller.up * ver;
             }
 
-            DebugDrawer.DrawVector(secondaryOrigin, _controller.down, 3, 1, Color.blue, 0);
+            if (_controller.IsDebugGroundCollision)
+            {
+                DebugDrawer.DrawVector(secondaryOrigin, _controller.down, 3, 1, Color.blue, 0);
+            }
+            
 
             //向正下方发射射线检测(注意这里是发射的射线不是Sphere)得到实际地面的法线
             if (Physics.Raycast(secondaryOrigin, _controller.down, out hit, Mathf.Infinity, _walkableLayer, _triggerInteraction))
             {
                 hit.distance -= _tolerance + _tinyTolerance;
 
-                DebugDrawer.DrawVector(hit.point, hit.normal, 3, 1, Color.magenta, 0);
-
+                if (_controller.IsDebugGroundCollision)
+                {
+                    DebugDrawer.DrawVector(hit.point, hit.normal, 3, 1, Color.magenta, 0);
+                }
+                
                 return true;
             }
             else
