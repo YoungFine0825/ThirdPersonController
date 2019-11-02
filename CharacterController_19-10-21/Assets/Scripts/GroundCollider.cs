@@ -250,9 +250,26 @@ namespace ThirdPersonCharaterController
         /// 
         /// </summary>
         /// <returns></returns>
-        public bool isGrounded()
+        public bool isGrounded(float distance)
         {
-            return _primaryGround != null;
+            float standAngle = GroundCollisionAttribute.DEFAULT_STAND_ANGLE;
+            float slopeLimit = GroundCollisionAttribute.DEFAULT_SLOPE_LIMIT;
+
+            if (_primaryGround == null || _primaryGround.distance > distance)
+            {
+                return false;
+            }
+
+            if (_farGround != null && Vector3.Angle(_farGround.normal,_controller.up) > standAngle)
+            {
+                if (_flushGround != null && Vector3.Angle(_flushGround.normal, _controller.up) < standAngle && _flushGround.distance <= distance)
+                {
+                    return true;
+                }
+                return false;
+            }
+
+            return true;
         }
 
 

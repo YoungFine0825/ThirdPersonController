@@ -64,6 +64,10 @@ namespace ThirdPersonCharaterController
 
         public bool IsClampToGround = true;
 
+        public float ClmapDistance = 1f;
+
+        public bool IsSlopeLimit = true;
+
         public CharacterCameraController _cameraController;
 
         public bool IsDebug = true;
@@ -151,6 +155,12 @@ namespace ThirdPersonCharaterController
             CorrectingPosition();
         }
 
+
+        public void MoveTo(Vector3 to)
+        {
+
+        }
+
         /// <summary>
         /// 
         /// </summary>
@@ -187,12 +197,23 @@ namespace ThirdPersonCharaterController
 
             currentGround.ProbeGround(SpherePosition(feet), 2);
 
+            if (IsSlopeLimit)
+            {
+                SlopeLimit();
+            }
+
             if (IsClampToGround)
             {
                 ClmapToGround();
             }
         }
 
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="iter"></param>
+        /// <param name="maxIter"></param>
         private void PushBack(int iter,int maxIter)
         {
 
@@ -308,7 +329,48 @@ namespace ThirdPersonCharaterController
         private void ClmapToGround()
         {
             float dis = currentGround.GetDistance();
-            transform.position -= up * dis;
+            if (dis <= ClmapDistance)
+            {
+                transform.position -= up * dis;
+            }
+
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="enable"></param>
+        public void EnableClmapToGround(bool enable)
+        {
+            IsClampToGround = enable;
+        }
+
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        private bool SlopeLimit()
+        {
+            Vector3 groundNormal = currentGround.GetNormal();
+            float angle = Vector3.Angle(groundNormal,up);
+
+            float standAngle = GroundCollisionAttribute.DEFAULT_STAND_ANGLE;
+            float slopeLimit = GroundCollisionAttribute.DEFAULT_SLOPE_LIMIT;
+
+            if (currentGround.collisionAttribute != null)
+            {
+                standAngle = currentGround.collisionAttribute.StandAngle;
+                slopeLimit = currentGround.collisionAttribute.SlopeLimit;
+            }
+
+            if (angle > slopeLimit)
+            {
+                return true;
+            }
+            return false;
         }
     }
 
