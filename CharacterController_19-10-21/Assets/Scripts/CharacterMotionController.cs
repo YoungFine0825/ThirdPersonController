@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using DG.Tweening;
 using UnityEngine;
 
 namespace ThirdPersonCharaterController
@@ -117,6 +116,14 @@ namespace ThirdPersonCharaterController
         private const string TemporaryLayer = "TempCast";
         private int TemporaryLayerIndex;
 
+        private Vector3 _movementDirection = Vector3.zero;
+        private Vector3 _movementDelta = Vector3.zero;
+
+        private Vector3 _posBeforeCorrection;
+
+        private float _rotationAngle = 0;
+        private Vector3 _lastLookDir;
+
         private void Awake()
         {
             TemporaryLayerIndex = LayerMask.NameToLayer(TemporaryLayer);
@@ -140,6 +147,7 @@ namespace ThirdPersonCharaterController
             if (head == null)
                 Debug.LogError("[SuperCharacterController] Head not found on controller");
 
+            _lastLookDir = Vector3.forward;
         }
 
 
@@ -156,9 +164,39 @@ namespace ThirdPersonCharaterController
         }
 
 
-        public void MoveTo(Vector3 to)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="direction"></param>
+        /// <param name="moveInput"></param>
+        /// <param name="speed"></param>
+        public void Move(Vector3 direction,Vector3 moveInput,float speed)
         {
+            _movementDirection = direction;
 
+            Vector3 moveDir = Vector3.zero;
+
+            if (moveInput.x != 0)
+            {
+                moveDir += -Vector3.Cross(direction, up) * moveInput.x;
+            }
+
+            if (moveInput.z != 0)
+            {
+                moveDir += direction * moveInput.z;
+            }
+
+            _movementDelta = moveDir.normalized * speed * Time.deltaTime;
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="speed"></param>
+        public void SimpleMove(Vector3 speed)
+        {
+            _movementDelta = speed;
         }
 
         /// <summary>
@@ -167,7 +205,7 @@ namespace ThirdPersonCharaterController
         private void Movement()
         {
             Vector3 dir = _cameraController.lookDirection;
-            transform.rotation = Quaternion.LookRotation(dir, up);
+            
 
             Vector3 moveInput = CharacterInputController.Instance.current.MoveInput;
             Vector3 moveDir = Vector3.zero;
@@ -181,7 +219,13 @@ namespace ThirdPersonCharaterController
                 moveDir += dir * moveInput.z;
             }
 
+            
+            _rotationAngle += Vector3.SignedAngle(_lastLookDir,moveDir.normalized,up);
+            transform.DORotateQuaternion(Quaternion.AngleAxis(_rotationAngle,up), 0.5f);
+
             transform.position +=  moveDir.normalized * (5 * Time.deltaTime);
+
+            _lastLookDir = moveDir;
         }
 
 
@@ -191,6 +235,9 @@ namespace ThirdPersonCharaterController
         /// </summary>
         private void CorrectingPosition()
         {
+            
+            _posBeforeCorrection = transform.position;
+
             currentGround.ProbeGround(SpherePosition(feet), 1);
 
             PushBack(1, 1);
@@ -201,6 +248,8 @@ namespace ThirdPersonCharaterController
             {
                 SlopeLimit();
             }
+
+            currentGround.ProbeGround(SpherePosition(feet), 3);
 
             if (IsClampToGround)
             {
@@ -241,7 +290,7 @@ namespace ThirdPersonCharaterController
 
                             if (isConcatedSucceeded)
                             {
-                                DebugDrawer.DrawMarker(_contactPoint, 2, Color.red, 0);
+                                DebugDrawer.DrawMarker(_contactPoint, 1, Color.red, 0);
 
                                 Vector3 v = _contactPoint - spherePosition;
 
@@ -306,6 +355,11 @@ namespace ThirdPersonCharaterController
                 }
             }
 
+            if (IsDebugGroundCollision && currentGround != null)
+            {
+                currentGround.DebugGroundHit();
+            }
+
         }
 
         /// <summary>
@@ -366,8 +420,37 @@ namespace ThirdPersonCharaterController
                 slopeLimit = currentGround.collisionAttribute.SlopeLimit;
             }
 
-            if (angle > slopeLimit)
+            if (angle >= slopeLimit)
             {
+                Vector3 absoluteMoveDirection = Math3d.ProjectVectorOnPlane(groundNormal, transform.position - _posBeforeCorrection);
+
+                // Retrieve a vector pointing down the slope
+                Vector3 r = Vector3.Cross(groundNormal, down);
+                Vector3 v = Vector3.Cross(r, groundNormal);
+
+                float absoluteAngle = Vector3.Angle(absoluteMoveDirection, v);
+
+                if (absoluteAngle <= 90.0f)
+                {
+                    return false;
+                }
+
+                // Calculate where to place the controller on the slope, or at the bottom, based on the desired movement distance
+                Vector3 resolvedPosition = Math3d.ProjectPointOnLine(_posBeforeCorrection, r, transform.position);
+                Vector3 direction = Math3d.ProjectVectorOnPlane(groundNormal, resolvedPosition - transform.position);
+
+                RaycastHit hit;
+
+                // Check if our path to our resolved position is blocked by any colliders
+                if (Physics.CapsuleCast(SpherePosition(feet), SpherePosition(head), radius, direction.normalized, out hit, direction.magnitude, Walkable, triggerInteraction))
+                {
+                    transform.position += v.normalized * hit.distance;
+                }
+                else
+                {
+                    transform.position += direction;
+                }
+
                 return true;
             }
             return false;

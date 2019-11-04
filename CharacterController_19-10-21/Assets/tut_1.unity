@@ -324,6 +324,7 @@ MonoBehaviour:
   actMotionController: {fileID: 1547821081}
   Distance: 5
   Height: 2
+  IsDebug: 0
 --- !u!1 &1033831048
 GameObject:
   m_ObjectHideFlags: 0
@@ -798,10 +799,11 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   IsClampToGround: 1
-  ClmapDistance: 1
+  ClmapDistance: 100
+  IsSlopeLimit: 1
   _cameraController: {fileID: 982680374}
   IsDebug: 1
-  IsDebugGroundCollision: 0
+  IsDebugGroundCollision: 1
 --- !u!4 &1547821084
 Transform:
   m_ObjectHideFlags: 0
@@ -850,6 +852,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   drawMeshTreeOnStart: 1
+--- !u!114 &1907822813
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1907822807}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 976b829dd51207b47897c2020046969e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  StandAngle: 70
+  SlopeLimit: 70
 --- !u!1 &1936165310
 GameObject:
   m_ObjectHideFlags: 0

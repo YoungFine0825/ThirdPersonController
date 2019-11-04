@@ -32,6 +32,8 @@ namespace ThirdPersonCharaterController
         private GroundHit _stepGround;
         private GroundHit _flushGround;
 
+        private GroundHit _originHit;
+
         public GroundCollisionAttribute collisionAttribute { get; private set; }
         public Transform transform { get; private set; }
 
@@ -70,6 +72,8 @@ namespace ThirdPersonCharaterController
             _stepGround = null;
             _flushGround = null;
 
+            _originHit = null;
+
             Vector3 up = _controller.up;
             Vector3 down = _controller.down;
 
@@ -99,27 +103,19 @@ namespace ThirdPersonCharaterController
                     slopeLimit = GroundCollisionAttribute.DEFAULT_SLOPE_LIMIT;
                 }
 
-                if (_controller.IsDebugGroundCollision)
-                {
-                    DebugDrawer.DrawVector(hit.point, hit.normal, 2.5f, 1, Color.yellow, 0);
-                }
-                
-                //transform = hit.transform;
+                _originHit = new GroundHit(hit.point, hit.normal, hit.distance);
 
                 //检测碰撞到是不是真正的地面（因为通过投射Sphere检测到的碰撞物体的法线是一个差值，需要得到地面的实际碰撞信息）
                 SimulateSphereCast(hit.normal, out hit);
 
-                //_primaryGround = new GroundHit(hit.point, hit.normal, hit.distance);
+                _primaryGround = new GroundHit(hit.point, hit.normal, hit.distance);
+
+                transform = hit.transform;
 
                 //将碰撞点投射到控制器位置所在的平面，如果里控制器位置的距离足够小,表示碰撞到的是一个平坦的平面
                 if (Vector3.Distance(Math3d.ProjectPointOnPlane(_controller.up, _controller.worldPosition, hit.point), _controller.worldPosition) < _tinyTolerance)
                 {
                     return;
-                }
-                else
-                {
-                    _primaryGround = new GroundHit(hit.point, hit.normal, hit.distance);
-                    transform = hit.transform;
                 }
 
                 Vector3 toCenter = Math3d.ProjectVectorOnPlane(up, (_controller.worldPosition - hit.point).normalized * _tinyTolerance);
@@ -158,6 +154,7 @@ namespace ThirdPersonCharaterController
                         //校正法线
                         if (SimulateSphereCast(flushHit.normal, out forTruethfulNormal))
                         {
+                            _primaryGround = new GroundHit(forTruethfulNormal.point, forTruethfulNormal.normal, forTruethfulNormal.distance);
                             _flushGround = new GroundHit(forTruethfulNormal.point, forTruethfulNormal.normal, forTruethfulNormal.distance);
                         }
                     }
@@ -219,21 +216,10 @@ namespace ThirdPersonCharaterController
                 secondaryOrigin += v3.normalized * hor + _controller.up * ver;
             }
 
-            if (_controller.IsDebugGroundCollision)
-            {
-                DebugDrawer.DrawVector(secondaryOrigin, _controller.down, 3, 1, Color.blue, 0);
-            }
-            
-
             //向正下方发射射线检测(注意这里是发射的射线不是Sphere)得到实际地面的法线
             if (Physics.Raycast(secondaryOrigin, _controller.down, out hit, Mathf.Infinity, _walkableLayer, _triggerInteraction))
             {
                 hit.distance -= _tolerance + _tinyTolerance;
-
-                if (_controller.IsDebugGroundCollision)
-                {
-                    DebugDrawer.DrawVector(hit.point, hit.normal, 3, 1, Color.magenta, 0);
-                }
                 
                 return true;
             }
@@ -298,6 +284,26 @@ namespace ThirdPersonCharaterController
                 return _primaryGround.normal;
             }
             return Vector3.zero;
+        }
+
+
+
+        public void DebugGroundHit()
+        {
+            if (_originHit != null)
+            {
+                DebugDrawer.DrawVector(_originHit.point, _originHit.normal, 4f, 1, Color.yellow, 0);
+            }
+
+            if (_primaryGround != null)
+            {
+                DebugDrawer.DrawVector(_primaryGround.point, _primaryGround.normal, 3.5f, 1, Color.magenta, 0);
+            }
+
+            if (_flushGround != null)
+            {
+                DebugDrawer.DrawVector(_flushGround.point, _flushGround.normal, 3, 1, Color.blue, 0);
+            }
         }
     }
 }
