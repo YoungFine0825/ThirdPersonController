@@ -15,9 +15,25 @@ namespace ThirdPersonCharaterController
     {
         public static CharacterInputController Instance = null;
 
-        public CharacterInput current ;
+        public CharacterInput current;
 
         public Vector2 RightStickMultiplier = new Vector2(3, -1.5f);
+
+        public bool IsMoveInputed
+        {
+            get
+            {
+                return current.MoveInput != Vector3.zero;
+            }
+        }
+
+        public bool IsLookInputed
+        {
+            get
+            {
+                return current.LookInput != Vector3.zero;
+            }
+        }
 
         // Start is called before the first frame update
         void Awake()
@@ -28,7 +44,7 @@ namespace ThirdPersonCharaterController
         }
 
         // Update is called once per frame
-        void Update()
+        void LateUpdate()
         {
 
             current.MoveInput = new Vector3(Input.GetAxisRaw("Horizontal"), 0, Input.GetAxisRaw("Vertical"));

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class CharacterMotionAttribute : MonoBehaviour
+public class PlayerMotionAttribute : MonoBehaviour
 {
     [Header("行走速度")]
     public float WalkSpeed = 1f;

@@ -324,6 +324,7 @@ MonoBehaviour:
   actMotionController: {fileID: 1547821081}
   Distance: 5
   Height: 2
+  EnableUpdate: 1
   IsDebug: 0
 --- !u!1 &1033831048
 GameObject:
@@ -774,6 +775,8 @@ GameObject:
   m_Component:
   - component: {fileID: 1547821084}
   - component: {fileID: 1547821081}
+  - component: {fileID: 1547821083}
+  - component: {fileID: 1547821082}
   m_Layer: 0
   m_Name: PlayerController
   m_TagString: Untagged
@@ -793,17 +796,51 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dc7cee183a27b494ea702b5909f93ab6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  rotationDelay: 0.5
   radius: 0.5
   triggerInteraction: 0
   Walkable:
     serializedVersion: 2
     m_Bits: 4294967295
+  cameraController: {fileID: 982680374}
   IsClampToGround: 1
-  ClmapDistance: 100
+  ClmapDistance: 0.15
   IsSlopeLimit: 1
-  _cameraController: {fileID: 982680374}
   IsDebug: 1
   IsDebugGroundCollision: 1
+--- !u!114 &1547821082
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1547821080}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1a8f00ed7586a6408493e6114ff9c4d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  motionController: {fileID: 1547821081}
+  motionAttribute: {fileID: 0}
+  curStateName: 
+--- !u!114 &1547821083
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1547821080}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2d6e1674ef4aff44b93064b1cbf10815, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  WalkSpeed: 10
+  WalkAcceleration: 5
+  RunSpeed: 20
+  RunAcceleration: 10
+  Gravity: 10
+  JumpForce: 1
 --- !u!4 &1547821084
 Transform:
   m_ObjectHideFlags: 0

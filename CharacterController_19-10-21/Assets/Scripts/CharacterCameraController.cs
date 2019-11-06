@@ -6,7 +6,6 @@ namespace ThirdPersonCharaterController
 {
     public class CharacterCameraController : MonoBehaviour
     {
-
         public Transform focus;
 
         public CharacterMotionController actMotionController;
@@ -15,11 +14,11 @@ namespace ThirdPersonCharaterController
 
         public float Height = 2.0f;
 
+        public bool EnableUpdate = true;
+
         public bool IsDebug = false;
 
         public Vector3 lookDirection { get; private set; }
-
-        
 
         private float _yRotation = 0;
 
@@ -34,10 +33,26 @@ namespace ThirdPersonCharaterController
             {
                 lookDirection = transform.forward;
             }
+
+            OnAwake();
+        }
+
+        private void Start()
+        {
+            OnStart();
+        }
+
+        private void OnDestroy()
+        {
+
         }
 
         private void LateUpdate()
         {
+            if(!EnableUpdate)
+            {
+                return;
+            }
 
             if (actMotionController == null)
             {
@@ -58,6 +73,16 @@ namespace ThirdPersonCharaterController
 
             transform.position -= transform.forward * Distance;
             transform.position += actMotionController.up * Height;
+
+        }
+
+        protected virtual void OnAwake()
+        {
+
+        }
+
+        protected virtual void OnStart()
+        {
 
         }
 

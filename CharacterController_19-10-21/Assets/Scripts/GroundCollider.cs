@@ -81,7 +81,7 @@ namespace ThirdPersonCharaterController
             Vector3 o = origin + (up * _tolerance);
 
             //用于碰撞检测的Sphere要小一点
-            float smallerRadius = _controller.radius - (_tolerance * _tolerance);
+            float smallerRadius = _controller.radius * 0.9f;
 
             RaycastHit hit;
 
@@ -154,11 +154,38 @@ namespace ThirdPersonCharaterController
                         //校正法线
                         if (SimulateSphereCast(flushHit.normal, out forTruethfulNormal))
                         {
-                            _primaryGround = new GroundHit(forTruethfulNormal.point, forTruethfulNormal.normal, forTruethfulNormal.distance);
+                            //_primaryGround = new GroundHit(forTruethfulNormal.point, forTruethfulNormal.normal, forTruethfulNormal.distance);
                             _flushGround = new GroundHit(forTruethfulNormal.point, forTruethfulNormal.normal, forTruethfulNormal.distance);
                         }
                     }
                 }
+
+                //// If we are currently standing on a ledge then the face nearest the center of the
+                //// controller should be steep enough to be counted as a wall. Retrieve the ground
+                //// it is connected to at it's base, if there exists any
+                //if (Vector3.Angle(nearHit.normal, up) > standAngle || nearHit.distance > _tolerance)
+                //{
+
+                //    // We contacted the wall of the ledge, rather than the landing. Raycast down
+                //    // the wall to retrieve the proper landing
+                //    if (Vector3.Angle(nearHit.normal, up) > standAngle)
+                //    {
+                //        // Retrieve a vector pointing down the slope
+                //        Vector3 r = Vector3.Cross(nearHit.normal, down);
+                //        Vector3 v = Vector3.Cross(r, nearHit.normal);
+
+                //        RaycastHit stepHit;
+
+                //        if (Physics.Raycast(nearPoint, v, out stepHit, Mathf.Infinity, _walkableLayer, _triggerInteraction))
+                //        {
+                //            _stepGround = new GroundHit(stepHit.point, stepHit.normal, stepHit.distance);
+                //        }
+                //    }
+                //    else
+                //    {
+                //        _stepGround = new GroundHit(nearHit.point, nearHit.normal, nearHit.distance);
+                //    }
+                //}
 
             }
             else if (Physics.Raycast(o, down, out hit, Mathf.Infinity, _walkableLayer, _triggerInteraction))
@@ -246,7 +273,7 @@ namespace ThirdPersonCharaterController
                 return false;
             }
 
-            if (_farGround != null && Vector3.Angle(_farGround.normal,_controller.up) > standAngle)
+            if (_farGround != null && Vector3.Angle(_farGround.normal, _controller.up) > standAngle)
             {
                 if (_flushGround != null && Vector3.Angle(_flushGround.normal, _controller.up) < standAngle && _flushGround.distance <= distance)
                 {
@@ -255,7 +282,49 @@ namespace ThirdPersonCharaterController
                 return false;
             }
 
+            //// Check if we are at the edge of a ledge, or on a high angle slope
+            //if (_farGround != null && !OnSteadyGround(_farGround.normal, _primaryGround.point))
+            //{
+            //    // Check if we are walking onto steadier ground
+            //    if (_nearGround != null && _nearGround.distance < distance && Vector3.Angle(_nearGround.normal, _controller.up) < standAngle && !OnSteadyGround(_nearGround.normal, _nearGround.point))
+            //    {
+            //        return true;
+            //    }
+
+            //    // Check if we are on a step or stair
+            //    if (_stepGround != null && _stepGround.distance < distance && Vector3.Angle(_stepGround.normal, _controller.up) < standAngle)
+            //    {
+            //        return true;
+            //    }
+
+            //    return false;
+            //}
+
             return true;
+        }
+
+
+        /// <summary>
+        /// To help the controller smoothly "fall" off surfaces and not hang on the edge of ledges,
+        /// check that the ground below us is "steady", or that the controller is not standing
+        /// on too extreme of a ledge
+        /// </summary>
+        /// <param name="normal">Normal of the surface to test against</param>
+        /// <param name="point">Point of contact with the surface</param>
+        /// <returns>True if the ground is steady</returns>
+        private bool OnSteadyGround(Vector3 normal, Vector3 point)
+        {
+            float angle = Vector3.Angle(normal, _controller.up);
+
+            float angleRatio = angle / groundingUpperBoundAngle;
+
+            float distanceRatio = Mathf.Lerp(groundingMinPercentFromcenter, groundingMaxPercentFromCenter, angleRatio);
+
+            Vector3 p = Math3d.ProjectPointOnPlane(_controller.up, _controller.transform.position, point);
+
+            float distanceFromCenter = Vector3.Distance(p, _controller.transform.position);
+
+            return distanceFromCenter <= distanceRatio * _controller.radius;
         }
 
 

@@ -53,7 +53,10 @@ namespace ThirdPersonCharaterController
 
     public class CharacterMotionController : MonoBehaviour
     {
-        
+
+        [Header("角色转向移动方向的延迟时间")]
+        public float rotationDelay = 0.5f;
+
         public float radius = 0.5f;
 
         [SerializeField]
@@ -61,13 +64,13 @@ namespace ThirdPersonCharaterController
 
         public LayerMask Walkable;
 
+        public CharacterCameraController cameraController;
+
         public bool IsClampToGround = true;
 
-        public float ClmapDistance = 1f;
+        public float ClmapDistance = 0.15f;
 
         public bool IsSlopeLimit = true;
-
-        public CharacterCameraController _cameraController;
 
         public bool IsDebug = true;
 
@@ -102,7 +105,7 @@ namespace ThirdPersonCharaterController
         public CollisionSphere feet { get; private set; }
 
         [SerializeField]
-        public CollisionSphere[] spheres = new CollisionSphere[3]{
+        public CollisionSphere[] spheres = new CollisionSphere[]{
         new CollisionSphere(false,true,0.5f),
         new CollisionSphere(false,false,1.0f),
         new CollisionSphere(true,false,1.5f)
@@ -122,7 +125,8 @@ namespace ThirdPersonCharaterController
         private Vector3 _posBeforeCorrection;
 
         private float _rotationAngle = 0;
-        private Vector3 _lastLookDir;
+
+        private Vector3 _lastMoveDirection;
 
         private void Awake()
         {
@@ -147,20 +151,28 @@ namespace ThirdPersonCharaterController
             if (head == null)
                 Debug.LogError("[SuperCharacterController] Head not found on controller");
 
-            _lastLookDir = Vector3.forward;
+            if (cameraController != null)
+            {
+                cameraController.focus = transform;
+
+                cameraController.actMotionController = this;
+            }
+
+            _lastMoveDirection = Vector3.forward;
+
+            
         }
 
 
         void Update()
         {
 
-            if (CharacterInputController.Instance.current.MoveInput != Vector3.zero)
+            if (Movement())
             {
-                Movement();
+                CorrectingPosition();
             }
-            
 
-            CorrectingPosition();
+            
         }
 
 
@@ -170,62 +182,52 @@ namespace ThirdPersonCharaterController
         /// <param name="direction"></param>
         /// <param name="moveInput"></param>
         /// <param name="speed"></param>
-        public void Move(Vector3 direction,Vector3 moveInput,float speed)
+        public void Move(Vector3 moveDirection, float speed, bool immediately = false)
         {
-            _movementDirection = direction;
+            _movementDirection = new Vector3(moveDirection.x,0,moveDirection.z);
 
-            Vector3 moveDir = Vector3.zero;
+            _movementDelta = moveDirection * speed * Time.deltaTime;
 
-            if (moveInput.x != 0)
+            if (immediately)
             {
-                moveDir += -Vector3.Cross(direction, up) * moveInput.x;
+                Update();
             }
-
-            if (moveInput.z != 0)
-            {
-                moveDir += direction * moveInput.z;
-            }
-
-            _movementDelta = moveDir.normalized * speed * Time.deltaTime;
         }
 
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="speed"></param>
-        public void SimpleMove(Vector3 speed)
+        public bool IsGrounded()
         {
-            _movementDelta = speed;
+            return currentGround.isGrounded(ClmapDistance);
         }
 
         /// <summary>
         /// 
         /// </summary>
-        private void Movement()
+        private bool Movement()
         {
-            Vector3 dir = _cameraController.lookDirection;
-            
-
-            Vector3 moveInput = CharacterInputController.Instance.current.MoveInput;
-            Vector3 moveDir = Vector3.zero;
-
-            if (moveInput.x != 0)
+            if (_movementDirection != Vector3.zero)
             {
-                moveDir += -Vector3.Cross(dir, up) * moveInput.x;
-            }
-            if (moveInput.z != 0)
-            {
-                moveDir += dir * moveInput.z;
+                _rotationAngle += Vector3.SignedAngle(_lastMoveDirection, _movementDirection,up);
+
+                transform.DORotateQuaternion(Quaternion.AngleAxis(_rotationAngle,up), rotationDelay);
+
+                _lastMoveDirection = _movementDirection;
+
+                _movementDirection = Vector3.zero;
             }
 
-            
-            _rotationAngle += Vector3.SignedAngle(_lastLookDir,moveDir.normalized,up);
-            transform.DORotateQuaternion(Quaternion.AngleAxis(_rotationAngle,up), 0.5f);
+            if(_movementDelta != Vector3.zero)
+            {
 
-            transform.position +=  moveDir.normalized * (5 * Time.deltaTime);
+                transform.position +=  _movementDelta;
 
-            _lastLookDir = moveDir;
+                _movementDelta = Vector3.zero;
+
+                return true;
+            }
+
+            return false;
+
         }
 
 
